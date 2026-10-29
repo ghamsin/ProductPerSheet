@@ -116,3 +116,5 @@ test('buildPdfReportModel and createPdfBinaryFromJpeg generate valid PDF report 
   assert.ok(pdfString.startsWith('%PDF-1.4'));
   assert.ok(pdfString.trimEnd().endsWith('%%EOF'));
 });
+
+

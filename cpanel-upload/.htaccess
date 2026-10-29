@@ -1,0 +1,7 @@
+<IfModule mod_dir.c>
+  DirectoryIndex index.html
+</IfModule>
+<IfModule mod_mime.c>
+  AddDefaultCharset UTF-8
+  AddType application/wasm .wasm
+</IfModule>
