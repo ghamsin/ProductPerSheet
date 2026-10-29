@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>فرم محاسبه تعداد محصولات در کاغذ</title>
+    <meta
+      name="description"
+      content="ابزار محاسبه تعداد محصولات قابل چیدمان در هر برگ کاغذ، مارجین چهار طرف، فاصله برش میلی‌متری، ابعاد کارهای چیده شده و میزان پرتی کاغذ."
+    />
+    <meta property="og:title" content="فرم محاسبه تعداد محصولات در کاغذ" />
+    <meta
+      property="og:description"
+      content="ابزار محاسبه تعداد محصولات قابل چیدمان در هر برگ کاغذ، مارجین چهار طرف، فاصله برش میلی‌متری، ابعاد کارهای چیده شده و میزان پرتی کاغذ."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Relative path for full cPanel root & subdirectory compatibility -->
+    <link rel="stylesheet" href="./stylesheet.css" />
+  </head>
+  <body>
+    <header class="top-bar">
+      <a href="#workspace" class="brand-wordmark">فرم محاسبه تعداد محصولات در کاغذ</a>
+      <nav class="top-nav" aria-label="ناوبری اصلی">
+        <a href="#parameters-panel" class="nav-link">ابعاد و مارجین</a>
+        <a href="#sheet-visualizer" class="nav-link">شماتیک زنده</a>
+        <a href="#waste-analysis" class="nav-link">تحلیل پرتی و برش</a>
+        <a href="#live-matrix-section" class="nav-link">مقایسه ورق‌ها</a>
+      </nav>
+      <div class="top-action">
+        <button type="button" class="btn-secondary" onclick="resetToSampleValues()">
+          بازنشانی مقادیر نمونه
+        </button>
+      </div>
+    </header>
+
+    <main id="workspace" class="workspace-container">
+      <!-- KPI Strip: 4 Primary Real-Time Metrics -->
+      <section class="kpi-strip" aria-label="خلاصه نتایج محاسبه زنده">
+        <div class="kpi-block">
+          <span class="kpi-label">تعداد محصولات در هر کاغذ</span>
+          <div class="kpi-value-row">
+            <strong id="kpiQuantity" class="kpi-number">48</strong>
+            <span class="kpi-unit">عدد در ورق</span>
+          </div>
+          <span id="kpiGridBreakdown" class="kpi-meta">6 × 8 ردیف/ستون</span>
+        </div>
+
+        <div class="kpi-block">
+          <span class="kpi-label">تعداد کاغذهای مورد نیاز</span>
+          <div class="kpi-value-row">
+            <strong id="kpiPaperCount" class="kpi-number">21</strong>
+            <span class="kpi-unit">برگ کاغذ</span>
+          </div>
+          <span id="kpiSurplusInfo" class="kpi-meta">کل تولید: 1008 عدد (8 اضافه)</span>
+        </div>
+
+        <div class="kpi-block">
+          <span class="kpi-label">سایز کارهای چیده شده</span>
+          <div class="kpi-value-row">
+            <strong id="kpiArrangedSize" class="kpi-number">61 × 49.4 cm</strong>
+          </div>
+          <span id="kpiArrangedMm" class="kpi-meta">610 × 494 میلی‌متر</span>
+        </div>
+
+        <div class="kpi-block kpi-waste">
+          <span class="kpi-label">میزان پرتی کل کاغذ</span>
+          <div class="kpi-value-row">
+            <strong id="kpiWastePercent" class="kpi-number waste-accent">17.7%</strong>
+          </div>
+          <span id="kpiEfficiencyPercent" class="kpi-meta">بهره‌وری مفید: 82.3%</span>
+        </div>
+      </section>
+
+      <!-- Main 2-Column Workspace -->
+      <div class="workspace-grid">
+        <!-- Right Column (in RTL): Form Inputs & Live Sliders -->
+        <section id="parameters-panel" class="panel form-panel" aria-labelledby="form-heading">
+          <div class="panel-header">
+            <h1 id="form-heading" class="panel-title">مشخصات محصول، کاغذ، مارجین و فاصله برش</h1>
+            <p class="panel-subtitle">
+              با تغییر هر عدد یا اسلایدر، موتور محاسباتی Rust/WASM نقشه و پرتی را در لحظه بروزرسانی می‌کند.
+            </p>
+          </div>
+
+          <form id="calculatorForm" onsubmit="event.preventDefault(); calculateQuantity();">
+            <!-- Section 1: Product Size with Live Sliders -->
+            <div class="field-section">
+              <div class="section-header-row">
+                <h2 class="section-label">۱. ابعاد تک محصول (سانتی‌متر)</h2>
+                <span class="section-hint">واحد: cm</span>
+              </div>
+              <div class="input-pair">
+                <div class="input-group">
+                  <label for="length">طول محصول (سانتی‌متر):</label>
+                  <input
+                    type="number"
+                    id="length"
+                    name="length"
+                    value="10"
+                    min="0.5"
+                    max="100"
+                    step="0.1"
+                  />
+                  <input
+                    type="range"
+                    id="lengthRange"
+                    class="live-slider"
+                    aria-label="اسلایدر طول محصول"
+                    min="1"
+                    max="50"
+                    step="0.5"
+                    value="10"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="width">عرض محصول (سانتی‌متر):</label>
+                  <input
+                    type="number"
+                    id="width"
+                    name="width"
+                    value="6"
+                    min="0.5"
+                    max="100"
+                    step="0.1"
+                  />
+                  <input
+                    type="range"
+                    id="widthRange"
+                    class="live-slider"
+                    aria-label="اسلایدر عرض محصول"
+                    min="1"
+                    max="50"
+                    step="0.5"
+                    value="6"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2: Paper Size & Quick Standard Presets -->
+            <div class="field-section">
+              <div class="section-header-row">
+                <h2 class="section-label">۲. ابعاد کاغذ پایه (سانتی‌متر)</h2>
+                <div class="preset-bar" role="group" aria-label="سایزهای استاندارد کاغذ">
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-paper-preset="A4"
+                    onclick="applyPaperPreset(29.7, 21, 'A4')"
+                  >
+                    A4 (29.7×21)
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-paper-preset="A3"
+                    onclick="applyPaperPreset(42, 29.7, 'A3')"
+                  >
+                    A3 (42×29.7)
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn active"
+                    data-paper-preset="B2"
+                    onclick="applyPaperPreset(70, 50, 'B2')"
+                  >
+                    50×70 (B2)
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-paper-preset="60x90"
+                    onclick="applyPaperPreset(90, 60, '60x90')"
+                  >
+                    60×90
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-paper-preset="B1"
+                    onclick="applyPaperPreset(100, 70, 'B1')"
+                  >
+                    70×100 (B1)
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-pair">
+                <div class="input-group">
+                  <label for="paperLength">طول کاغذ (سانتی‌متر):</label>
+                  <input
+                    type="number"
+                    id="paperLength"
+                    name="paperLength"
+                    value="70"
+                    min="1"
+                    max="200"
+                    step="0.1"
+                  />
+                  <input
+                    type="range"
+                    id="paperLengthRange"
+                    class="live-slider"
+                    aria-label="اسلایدر طول کاغذ"
+                    min="10"
+                    max="140"
+                    step="1"
+                    value="70"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="paperWidth">عرض کاغذ (سانتی‌متر):</label>
+                  <input
+                    type="number"
+                    id="paperWidth"
+                    name="paperWidth"
+                    value="50"
+                    min="1"
+                    max="200"
+                    step="0.1"
+                  />
+                  <input
+                    type="range"
+                    id="paperWidthRange"
+                    class="live-slider"
+                    aria-label="اسلایدر عرض کاغذ"
+                    min="10"
+                    max="120"
+                    step="1"
+                    value="50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 3: Four-Sided Sheet Margins in Millimeters -->
+            <div class="field-section">
+              <div class="section-header-row">
+                <h2 class="section-label">۳. مارجین چهار طرف کاغذ (میلی‌متر)</h2>
+                <div class="preset-bar" role="group" aria-label="پیش‌فرض‌های مارجین چهار طرف">
+                  <button
+                    type="button"
+                    class="preset-btn active"
+                    data-margin-preset="0"
+                    onclick="applyMarginPreset(0, 0, 0, 0, '0')"
+                  >
+                    بدون مارجین (0mm)
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-margin-preset="5"
+                    onclick="applyMarginPreset(5, 5, 5, 5, '5')"
+                  >
+                    5mm چهار طرف
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-margin-preset="10"
+                    onclick="applyMarginPreset(10, 10, 10, 10, '10')"
+                  >
+                    10mm استاندارد
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-margin-preset="gripper"
+                    onclick="applyMarginPreset(12, 5, 5, 5, 'gripper')"
+                  >
+                    لب پنجه 12mm
+                  </button>
+                </div>
+              </div>
+
+              <div class="margin-quad-grid">
+                <div class="input-group">
+                  <label for="marginTop">مارجین بالا (mm):</label>
+                  <input
+                    type="number"
+                    id="marginTop"
+                    name="marginTop"
+                    value="0"
+                    min="0"
+                    max="200"
+                    step="1"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="marginBottom">مارجین پایین (mm):</label>
+                  <input
+                    type="number"
+                    id="marginBottom"
+                    name="marginBottom"
+                    value="0"
+                    min="0"
+                    max="200"
+                    step="1"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="marginRight">مارجین راست (mm):</label>
+                  <input
+                    type="number"
+                    id="marginRight"
+                    name="marginRight"
+                    value="0"
+                    min="0"
+                    max="200"
+                    step="1"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="marginLeft">مارجین چپ (mm):</label>
+                  <input
+                    type="number"
+                    id="marginLeft"
+                    name="marginLeft"
+                    value="0"
+                    min="0"
+                    max="200"
+                    step="1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 4: Inter-product Gap in Millimeters, Total Order & Paper GSM -->
+            <div class="field-section">
+              <div class="section-header-row">
+                <h2 class="section-label">۴. فاصله بین محصولات (میلی‌متر)، تیراژ و گرماژ</h2>
+                <div class="preset-bar" role="group" aria-label="فاصله پیش‌فرض برش">
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-gap-preset="0"
+                    onclick="applyGapPreset(0)"
+                  >
+                    0mm
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn active"
+                    data-gap-preset="2"
+                    onclick="applyGapPreset(2)"
+                  >
+                    2mm استاندارد
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-gap-preset="3"
+                    onclick="applyGapPreset(3)"
+                  >
+                    3mm قالب
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-gap-preset="5"
+                    onclick="applyGapPreset(5)"
+                  >
+                    5mm برش
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-pair">
+                <div class="input-group">
+                  <label for="gap">فاصله بین هر محصول (میلی‌متر):</label>
+                  <input
+                    type="number"
+                    id="gap"
+                    name="gap"
+                    value="2"
+                    min="0"
+                    max="50"
+                    step="0.5"
+                  />
+                  <input
+                    type="range"
+                    id="gapRange"
+                    class="live-slider"
+                    aria-label="اسلایدر فاصله بین محصولات"
+                    min="0"
+                    max="15"
+                    step="0.5"
+                    value="2"
+                  />
+                </div>
+                <div class="input-group">
+                  <label for="productCount">تعداد محصولات (تیراژ کل):</label>
+                  <input
+                    type="number"
+                    id="productCount"
+                    name="productCount"
+                    value="1000"
+                    min="1"
+                    step="1"
+                  />
+                </div>
+              </div>
+
+              <div class="input-single-row">
+                <div class="input-group">
+                  <label for="paperGsm">گرماژ کاغذ (گرم بر متر مربع - جهت محاسبه زنده وزن کاغذ):</label>
+                  <select id="paperGsm" name="paperGsm" class="select-control">
+                    <option value="80">80 گرم (تحریر استاندارد)</option>
+                    <option value="100">100 گرم (تحریر سنگین)</option>
+                    <option value="135" selected>135 گرم (گلاسه استاندارد)</option>
+                    <option value="170">170 گرم (گلاسه ضخیم)</option>
+                    <option value="250">250 گرم (مقوا پشت طوسی / ایندربرد)</option>
+                    <option value="300">300 گرم (گلاسه / کارت ویزیت)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 5: Computed Form Outputs -->
+            <div class="field-section result-inputs-section">
+              <h2 class="section-label">۵. خروجی مستقیم فرم</h2>
+              <div class="input-pair">
+                <div class="input-group readonly-group">
+                  <label for="quantity">تعداد محصولات در کاغذ:</label>
+                  <input
+                    type="number"
+                    id="quantity"
+                    name="quantity"
+                    readonly
+                  />
+                </div>
+                <div class="input-group readonly-group">
+                  <label for="paperCount">تعداد کاغذهای مورد نیاز:</label>
+                  <input
+                    type="number"
+                    id="paperCount"
+                    name="paperCount"
+                    readonly
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <input
+                type="button"
+                id="calculateBtn"
+                class="btn-primary"
+                value="محاسبه تعداد محصولات"
+                onclick="calculateQuantity()"
+              />
+              <button
+                type="button"
+                id="exportPdfBtn"
+                class="btn-export-pdf"
+                onclick="exportPdfReport()"
+              >
+                خروجی گزارش PDF
+              </button>
+            </div>
+
+            <div
+              id="pdfExportStatus"
+              class="pdf-export-status"
+              role="status"
+              aria-live="polite"
+              hidden
+            ></div>
+          </form>
+        </section>
+
+        <!-- Left Column (in RTL): Dynamic Sheet Layout Visualizer, Waste Analysis & Live Matrix -->
+        <div class="visualizer-column">
+          <!-- Dynamic Sheet Canvas Card -->
+          <section id="sheet-visualizer" class="panel canvas-panel" aria-labelledby="visualizer-heading">
+            <div class="canvas-toolbar">
+              <div>
+                <h2 id="visualizer-heading" class="panel-title">
+                  پیش‌نمایش دینامیک سایز کارهای چیده شده و پرتی کاغذ
+                </h2>
+                <p id="sheetStatusText" class="canvas-status-line">
+                  در حال محاسبه نقشه چیدمان...
+                </p>
+              </div>
+
+              <div class="toolbar-controls">
+                <div class="segmented-control" role="group" aria-label="جهت چیدمان محصول در کاغذ">
+                  <button
+                    type="button"
+                    class="segment-btn active"
+                    data-orientation-btn="normal"
+                    aria-pressed="true"
+                    onclick="setOrientationMode('normal')"
+                  >
+                    چیدمان عادی
+                  </button>
+                  <button
+                    type="button"
+                    class="segment-btn"
+                    data-orientation-btn="rotated"
+                    aria-pressed="false"
+                    onclick="setOrientationMode('rotated')"
+                  >
+                    چرخش ۹۰ درجه
+                  </button>
+                  <button
+                    type="button"
+                    class="segment-btn"
+                    data-orientation-btn="auto"
+                    aria-pressed="false"
+                    onclick="setOrientationMode('auto')"
+                  >
+                    بهینه خودکار
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  id="toggleDimensionsBtn"
+                  class="preset-btn active"
+                  aria-pressed="true"
+                  onclick="toggleDimensionsOverlay()"
+                >
+                  نمایش خطوط اندازه
+                </button>
+              </div>
+            </div>
+
+            <!-- Interactive SVG Container -->
+            <div
+              id="sheetCanvasContainer"
+              class="sheet-canvas-wrapper"
+              data-testid="sheet-canvas-container"
+            ></div>
+
+            <!-- Live Interactive Cell Coordinate Inspector -->
+            <div id="liveCellInspector" class="cell-inspector-bar" aria-live="polite">
+              نشانگر ماوس را روی هر خانه از نقشه ببرید تا مختصات دقیق برش میلی‌متری آن محصول را ببینید.
+            </div>
+
+            <!-- Legend & Utilization Progress Bar -->
+            <div class="canvas-footer">
+              <div class="legend-items">
+                <span class="legend-item">
+                  <span class="legend-swatch swatch-product" aria-hidden="true"></span>
+                  <span>سطح مفید محصولات چیده شده</span>
+                </span>
+                <span class="legend-sep" aria-hidden="true">·</span>
+                <span class="legend-item">
+                  <span class="legend-swatch swatch-gap" aria-hidden="true"></span>
+                  <span>فاصله برش بین محصولات (mm)</span>
+                </span>
+                <span class="legend-sep" aria-hidden="true">·</span>
+                <span class="legend-item">
+                  <span class="legend-swatch swatch-waste" aria-hidden="true"></span>
+                  <span>پرتی، حاشیه و مارجین چهار طرف کاغذ</span>
+                </span>
+              </div>
+
+              <div class="utilization-bar-track" aria-label="نسبت سطح مفید به پرتی کاغذ">
+                <div id="efficiencyBarFill" class="bar-fill-efficiency" style="width: 82.3%"></div>
+                <div id="wasteBarFill" class="bar-fill-waste" style="width: 17.7%"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Detailed Waste, Guillotine Cuts & Weight Breakdown Table -->
+          <section id="waste-analysis" class="panel breakdown-panel" aria-labelledby="waste-heading">
+            <div class="breakdown-header">
+              <h2 id="waste-heading" class="panel-title">
+                جدول جزئیات ابعاد چیده شده، مارجین، خطوط برش و تفکیک پرتی کار
+              </h2>
+              <div id="orientation-compare" class="orientation-comparison">
+                <span>حالت عادی: <strong id="normalModeCount" class="mono-num">—</strong></span>
+                <span aria-hidden="true">·</span>
+                <span>چرخش ۹۰ درجه: <strong id="rotatedModeCount" class="mono-num">—</strong></span>
+              </div>
+            </div>
+
+            <div class="metrics-table" role="region" aria-label="جدول مقادیر پرتی و ابعاد">
+              <div class="metric-row">
+                <span class="metric-name">ابعاد کل کاغذ پایه (مساحت کل ورق)</span>
+                <span id="detailPaperSize" class="metric-val mono-num">70 × 50 سانتی‌متر (3500 cm²)</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">مارجین چهار طرف ورق و سطح قابل چاپ</span>
+                <span id="detailMarginsFourSides" class="metric-val mono-num">بالا: 0mm · پایین: 0mm · راست: 0mm · چپ: 0mm (سطح قابل چاپ: 70×50 cm)</span>
+              </div>
+              <div class="metric-row highlight-row">
+                <span class="metric-name">سایز کل کارهای چیده شده (طول × عرض مفید اشغال‌شده)</span>
+                <span id="detailArrangedSize" class="metric-val mono-num">61 × 49.4 سانتی‌متر (3013.4 cm²)</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">فاصله لحاظ‌شده بین هر محصول (تیغ برش)</span>
+                <span id="detailGapMm" class="metric-val mono-num">2 میلی‌متر (0.2 سانتی‌متر)</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">حاشیه اضافه مانده در طول و عرض کاغذ (پرتی کناره + مارجین)</span>
+                <span id="detailUnusedMargins" class="metric-val mono-num">طول: 9 cm · عرض: 0.6 cm</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">تعداد خطوط برش گیوتین (محاسبه زنده Rust/WASM)</span>
+                <span id="detailGuillotineCuts" class="metric-val mono-num">26 خط برش در هر ورق</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">وزن کل کاغذ مصرفی سفارش (محاسبه زنده Rust/WASM)</span>
+                <span id="detailPaperWeightKg" class="metric-val mono-num">0.99 کیلوگرم (گرماژ 135g)</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">مساحت پرتی کناره‌های کاغذ و مارجین (در هر ورق)</span>
+                <span id="detailEdgeWasteArea" class="metric-val mono-num">486.6 cm²</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">مساحت پرتی ناشی از فاصله بین محصولات (در هر ورق)</span>
+                <span id="detailGapWasteArea" class="metric-val mono-num">133.4 cm²</span>
+              </div>
+              <div class="metric-row waste-summary-row">
+                <span class="metric-name">مجموع پرتی در هر ورق کاغذ (مساحت و درصد)</span>
+                <span id="detailTotalWasteArea" class="metric-val mono-num waste-text">620 cm² (17.7%)</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-name">مجموع پرتی کل سفارش (در تمام کاغذهای مصرفی)</span>
+                <span id="detailAllSheetsWaste" class="metric-val mono-num">13020 cm²</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Live Standard Sheets Comparison Matrix -->
+          <section id="live-matrix-section" class="panel matrix-panel" aria-labelledby="matrix-heading">
+            <div class="breakdown-header">
+              <div>
+                <h2 id="matrix-heading" class="panel-title">
+                  مقایسه زنده سایزهای استاندارد کاغذ برای این محصول
+                </h2>
+                <p class="panel-subtitle">
+                  محاسبه همزمان تمام ورق‌های استاندارد چاپخانه با لحاظ مارجین چهار طرف و فاصله برش
+                </p>
+              </div>
+            </div>
+
+            <div class="table-scroll-wrapper">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>سایز کاغذ</th>
+                    <th>ابعاد ورق</th>
+                    <th>ظرفیت در ورق</th>
+                    <th>سایز چیده شده</th>
+                    <th>درصد پرتی</th>
+                    <th>عملیات</th>
+                  </tr>
+                </thead>
+                <tbody id="liveSheetMatrixBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- Relative path for full cPanel root & subdirectory compatibility -->
+    <script src="./script.js"></script>
+  </body>
+</html>

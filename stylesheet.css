@@ -277,6 +277,12 @@ input[type="number"] {
   gap: 0.875rem;
 }
 
+.margin-quad-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
 .input-group {
   display: flex;
   flex-direction: column;
@@ -652,9 +658,102 @@ input[type="number"] {
   direction: rtl;
 }
 
-.metric-val.waste-text {
+.metric-val.waste-text,
+.waste-text {
   color: var(--waste-crimson);
   font-weight: 700;
+}
+
+.low-waste-text {
+  color: #16A34A;
+  font-weight: 700;
+}
+
+/* Live Sliders & Select Controls */
+.live-slider {
+  width: 100%;
+  height: 6px;
+  margin-top: 0.2rem;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
+.input-single-row {
+  margin-top: 0.75rem;
+}
+
+.select-control {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.84375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.4375rem;
+  cursor: pointer;
+}
+
+.select-control:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.16);
+}
+
+/* Live Cell Inspector Bar */
+.cell-inspector-bar {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-hairline);
+  border-radius: 0.375rem;
+  font-size: 0.78125rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.product-cell {
+  cursor: pointer;
+}
+
+/* Live Standard Sheets Comparison Table */
+.table-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84375rem;
+  text-align: right;
+}
+
+.comparison-table th {
+  padding: 0.625rem 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.comparison-table td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border-hairline);
+  vertical-align: middle;
+}
+
+.comparison-table tr.matrix-row-active {
+  background-color: #F0F9FF;
+}
+
+.best-choice-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #16A34A;
 }
 
 /* Responsive Reflow */
@@ -704,7 +803,8 @@ input[type="number"] {
     border-bottom: none;
   }
 
-  .input-pair {
+  .input-pair,
+  .form-actions {
     grid-template-columns: minmax(0, 1fr);
   }
 }

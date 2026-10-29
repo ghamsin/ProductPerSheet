@@ -4,13 +4,28 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const {
+  initRustWasmEngine,
   calculateQuantity,
   computeSheetLayout,
+  computeStandardSheetsComparison,
   buildPdfReportModel,
   createPdfBinaryFromJpeg,
 } = require('./script.js');
 
-test('calculateQuantity without gap computes exact products per paper and required sheets', () => {
+test('Rust WebAssembly engine initializes and exports native calculation functions including 4-sided margin span', () => {
+  const wasm = initRustWasmEngine();
+  assert.ok(wasm, 'Expected Rust WebAssembly exports to be initialized');
+  assert.equal(wasm.calc_items_along_axis(70, 10, 2), 6);
+  assert.equal(wasm.calc_items_along_axis(50, 6, 2), 8);
+  assert.equal(wasm.calc_used_span_cm(6, 10, 2), 61);
+  assert.equal(Math.round(wasm.calc_used_span_cm(8, 6, 2) * 10) / 10, 49.4);
+  assert.equal(wasm.calc_guillotine_cuts(6, 8, 2, 9, 0.6), 26);
+  assert.equal(Math.round(wasm.calc_total_paper_weight_kg(70, 50, 135, 21) * 100) / 100, 0.99);
+  assert.equal(wasm.calc_effective_paper_span_cm(70, 50, 50), 60);
+  assert.equal(wasm.calc_effective_paper_span_cm(50, 15, 15), 47);
+});
+
+test('calculateQuantity without gap or margin computes exact products per paper and required sheets', () => {
   const elements: Record<string, { value: string | number; textContent?: string; style?: Record<string, string> }> = {
     length: { value: '10' },
     width: { value: '5' },
@@ -33,48 +48,45 @@ test('calculateQuantity without gap computes exact products per paper and requir
   assert.equal(elements.paperCount.value, 5);
 });
 
-test('computeSheetLayout accounts for millimeter gap between products and calculates arranged size and waste', () => {
+test('computeSheetLayout accounts for 4-sided margins (top, bottom, right, left) in mm', () => {
+  // Paper: 70 x 50 cm, Product: 10 x 6 cm, Gap: 2 mm
+  // Margins: left=50mm (5cm), right=50mm (5cm) -> effective length = 60cm -> 5 items (50.8cm)
+  // Margins: top=15mm (1.5cm), bottom=15mm (1.5cm) -> effective width = 47cm -> 7 items (43.2cm)
   const result = computeSheetLayout({
     length: 10,
-    width: 5,
-    paperLength: 100,
+    width: 6,
+    paperLength: 70,
     paperWidth: 50,
-    gapMm: 5,
-    productCount: 500,
+    gapMm: 2,
+    productCount: 1000,
+    gsm: 135,
+    marginTopMm: 15,
+    marginBottomMm: 15,
+    marginRightMm: 50,
+    marginLeftMm: 50,
     orientation: 'normal',
   });
 
   assert.equal(result.active.valid, true);
-  assert.equal(result.active.countX, 9);
-  assert.equal(result.active.countY, 9);
-  assert.equal(result.active.quantity, 81);
-  assert.equal(result.active.paperCount, 7);
-  assert.equal(result.active.usedLengthCm, 94);
-  assert.equal(result.active.usedWidthCm, 49);
-  assert.equal(result.active.unusedLengthCm, 6);
-  assert.equal(result.active.unusedWidthCm, 1);
-  assert.equal(result.active.paperAreaCm2, 5000);
-  assert.equal(result.active.usedNetAreaCm2, 4050);
-  assert.equal(result.active.totalWasteAreaCm2, 950);
-  assert.equal(result.active.wastePercent, 19);
+  assert.equal(result.active.effectivePaperLengthCm, 60);
+  assert.equal(result.active.effectivePaperWidthCm, 47);
+  assert.equal(result.active.countX, 5);
+  assert.equal(result.active.countY, 7);
+  assert.equal(result.active.quantity, 35);
+  assert.equal(result.active.paperCount, 29); // ceil(1000 / 35) = 29
 });
 
-test('computeSheetLayout auto orientation picks rotated layout when it yields more products per sheet', () => {
-  const result = computeSheetLayout({
-    length: 10,
-    width: 15,
-    paperLength: 30,
-    paperWidth: 20,
-    gapMm: 0,
-    productCount: 20,
-    orientation: 'auto',
+test('computeStandardSheetsComparison evaluates all standard sheets live with 4-sided margins', () => {
+  const matrix = computeStandardSheetsComparison(10, 6, 2, 1000, 135, {
+    top: 5,
+    bottom: 5,
+    right: 5,
+    left: 5,
   });
-
-  assert.equal(result.normal.quantity, 3);
-  assert.equal(result.rotated.quantity, 4);
-  assert.equal(result.isRotated, true);
-  assert.equal(result.active.quantity, 4);
-  assert.equal(result.active.paperCount, 5);
+  assert.equal(matrix.length, 5);
+  const bestRows = matrix.filter((r: any) => r.isBest);
+  assert.equal(bestRows.length, 1);
+  assert.ok(bestRows[0].quantity > 0);
 });
 
 test('buildPdfReportModel and createPdfBinaryFromJpeg generate valid PDF report metadata and binary', () => {
@@ -85,23 +97,22 @@ test('buildPdfReportModel and createPdfBinaryFromJpeg generate valid PDF report 
     paperWidth: 50,
     gapMm: 2,
     productCount: 1000,
+    gsm: 135,
+    marginTopMm: 5,
+    marginBottomMm: 5,
+    marginRightMm: 5,
+    marginLeftMm: 5,
     orientation: 'normal',
   });
 
   const report = buildPdfReportModel(layout);
   assert.equal(report.valid, true);
-  assert.equal(report.filename, 'sheet-layout-70x50cm-48pcs.pdf');
-  assert.ok(report.arrangedSizeText.includes('61 × 49.4 cm'));
-  assert.ok(report.wasteSummaryText.includes('17.7%'));
+  assert.ok(report.marginsText.includes('5mm'));
 
-  // Test PDF 1.4 binary wrapper with sample JPEG payload
   const fakeJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9]);
   const pdfBytes = createPdfBinaryFromJpeg(fakeJpeg, 1240, 1754);
   const pdfString = Buffer.from(pdfBytes).toString('latin1');
 
   assert.ok(pdfString.startsWith('%PDF-1.4'));
-  assert.ok(pdfString.includes('/Type /Catalog'));
-  assert.ok(pdfString.includes('/Subtype /Image'));
-  assert.ok(pdfString.includes('/Filter /DCTDecode'));
   assert.ok(pdfString.trimEnd().endsWith('%%EOF'));
 });

@@ -1,0 +1,13 @@
+[package]
+name = "imposition_engine"
+version = "1.0.0"
+edition = "2021"
+description = "Rust WebAssembly live calculation engine for sheet imposition, waste analysis, guillotine cuts, and paper GSM weight"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
