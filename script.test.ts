@@ -10,6 +10,8 @@ const {
   computeStandardSheetsComparison,
   buildPdfReportModel,
   createPdfBinaryFromJpeg,
+  toggleMobileDesktopMode,
+  getViewportMode,
 } = require('./script.js');
 
 test('Rust WebAssembly engine initializes and exports native calculation functions including 4-sided margin span', () => {
@@ -116,5 +118,55 @@ test('buildPdfReportModel and createPdfBinaryFromJpeg generate valid PDF report 
   assert.ok(pdfString.startsWith('%PDF-1.4'));
   assert.ok(pdfString.trimEnd().endsWith('%%EOF'));
 });
+
+test('toggleMobileDesktopMode switches between mobile and desktop view modes on consecutive clicks', () => {
+  const bodyClasses = new Set<string>();
+  const bodyAttrs: Record<string, string> = {};
+  const toggleBtn = {
+    textContent: 'نمایش نسخه موبایل',
+    attrs: {} as Record<string, string>,
+    classes: new Set<string>(),
+    setAttribute(k: string, v: string) {
+      this.attrs[k] = v;
+    },
+    classList: {
+      add: (c: string) => toggleBtn.classes.add(c),
+      remove: (c: string) => toggleBtn.classes.delete(c),
+    },
+  };
+
+  (globalThis as any).document = {
+    body: {
+      classList: {
+        add: (c: string) => bodyClasses.add(c),
+        remove: (c: string) => bodyClasses.delete(c),
+      },
+      setAttribute: (k: string, v: string) => {
+        bodyAttrs[k] = v;
+      },
+    },
+    getElementById: (id: string) => (id === 'toggleViewportModeBtn' ? toggleBtn : null),
+  };
+
+  assert.equal(getViewportMode(), 'desktop');
+
+  // First click -> switches to mobile mode
+  const mode1 = toggleMobileDesktopMode();
+  assert.equal(mode1, 'mobile');
+  assert.equal(bodyClasses.has('mobile-view-mode'), true);
+  assert.equal(bodyAttrs['data-view-mode'], 'mobile');
+  assert.equal(toggleBtn.textContent, 'بازگشت به نسخه دسکتاپ');
+  assert.equal(toggleBtn.attrs['aria-pressed'], 'true');
+
+  // Second click -> switches back to desktop mode
+  const mode2 = toggleMobileDesktopMode();
+  assert.equal(mode2, 'desktop');
+  assert.equal(bodyClasses.has('mobile-view-mode'), false);
+  assert.equal(bodyClasses.has('desktop-view-forced'), true);
+  assert.equal(bodyAttrs['data-view-mode'], 'desktop');
+  assert.equal(toggleBtn.textContent, 'نمایش نسخه موبایل');
+  assert.equal(toggleBtn.attrs['aria-pressed'], 'false');
+});
+
 
 

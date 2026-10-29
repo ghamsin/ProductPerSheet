@@ -32,8 +32,14 @@
         <a href="#live-matrix-section" class="nav-link">مقایسه ورق‌ها</a>
       </nav>
       <div class="top-action">
-        <button type="button" class="btn-secondary" onclick="resetToSampleValues()">
-          بازنشانی مقادیر نمونه
+        <button
+          type="button"
+          id="toggleViewportModeBtn"
+          class="btn-viewport-toggle"
+          aria-pressed="false"
+          onclick="toggleMobileDesktopMode()"
+        >
+          نمایش نسخه موبایل
         </button>
       </div>
     </header>
@@ -81,7 +87,12 @@
         <!-- Right Column (in RTL): Form Inputs & Live Sliders -->
         <section id="parameters-panel" class="panel form-panel" aria-labelledby="form-heading">
           <div class="panel-header">
-            <h1 id="form-heading" class="panel-title">مشخصات محصول، کاغذ، مارجین و فاصله برش</h1>
+            <div class="panel-header-top">
+              <h1 id="form-heading" class="panel-title">مشخصات محصول، کاغذ، مارجین و فاصله برش</h1>
+              <button type="button" class="btn-secondary" onclick="resetToSampleValues()">
+                بازنشانی مقادیر نمونه
+              </button>
+            </div>
             <p class="panel-subtitle">
               با تغییر هر عدد یا اسلایدر، موتور محاسباتی Rust/WASM نقشه و پرتی را در لحظه بروزرسانی می‌کند.
             </p>

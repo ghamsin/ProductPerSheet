@@ -1365,6 +1365,49 @@ function exportPdfReport() {
   };
 }
 
+var currentViewportMode = "desktop";
+
+function getViewportMode() {
+  return currentViewportMode;
+}
+
+function toggleMobileDesktopMode(forceMode) {
+  if (forceMode === "mobile" || forceMode === "desktop") {
+    currentViewportMode = forceMode;
+  } else {
+    currentViewportMode = currentViewportMode === "mobile" ? "desktop" : "mobile";
+  }
+
+  var isMobile = currentViewportMode === "mobile";
+
+  if (typeof document !== "undefined") {
+    if (document.body) {
+      if (isMobile) {
+        document.body.classList.add("mobile-view-mode");
+        document.body.classList.remove("desktop-view-forced");
+        document.body.setAttribute("data-view-mode", "mobile");
+      } else {
+        document.body.classList.remove("mobile-view-mode");
+        document.body.classList.add("desktop-view-forced");
+        document.body.setAttribute("data-view-mode", "desktop");
+      }
+    }
+
+    var toggleBtn = document.getElementById("toggleViewportModeBtn");
+    if (toggleBtn) {
+      toggleBtn.textContent = isMobile ? "بازگشت به نسخه دسکتاپ" : "نمایش نسخه موبایل";
+      toggleBtn.setAttribute("aria-pressed", isMobile ? "true" : "false");
+      if (isMobile && toggleBtn.classList) {
+        toggleBtn.classList.add("active-mobile-mode");
+      } else if (toggleBtn.classList) {
+        toggleBtn.classList.remove("active-mobile-mode");
+      }
+    }
+  }
+
+  return currentViewportMode;
+}
+
 function resetToSampleValues() {
   if (typeof document === "undefined") return;
   var defaults = {
@@ -1455,6 +1498,8 @@ if (typeof module !== "undefined" && module.exports) {
     computeStandardSheetsComparison: computeStandardSheetsComparison,
     buildPdfReportModel: buildPdfReportModel,
     createPdfBinaryFromJpeg: createPdfBinaryFromJpeg,
-    exportPdfReport: exportPdfReport
+    exportPdfReport: exportPdfReport,
+    toggleMobileDesktopMode: toggleMobileDesktopMode,
+    getViewportMode: getViewportMode
   };
 }
