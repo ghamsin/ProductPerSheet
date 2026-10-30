@@ -300,6 +300,7 @@ function computeSheetLayout(params) {
 
 var STANDARD_PAPERS = [
   { code: "A4", name: "A4 استاندارد", length: 29.7, width: 21 },
+  { code: "B4", name: "B4 (25×35)", length: 35, width: 25 },
   { code: "A3", name: "A3 استاندارد", length: 42, width: 29.7 },
   { code: "B2", name: "50×70 (B2)", length: 70, width: 50 },
   { code: "60x90", name: "60×90 شیت", length: 90, width: 60 },
@@ -580,6 +581,7 @@ function calculateQuantity() {
     var pCode = pBtn.getAttribute("data-paper-preset");
     var matchesPreset =
       (pCode === "A4" && paperLength === 29.7 && paperWidth === 21) ||
+      (pCode === "B4" && paperLength === 35 && paperWidth === 25) ||
       (pCode === "A3" && paperLength === 42 && paperWidth === 29.7) ||
       (pCode === "B2" && paperLength === 70 && paperWidth === 50) ||
       (pCode === "60x90" && paperLength === 90 && paperWidth === 60) ||
@@ -618,6 +620,7 @@ function calculateQuantity() {
 
   renderSheetVisualization(result);
   renderLiveSheetComparisonMatrix(length, width, gapMm, productCount, gsm, paperLength, paperWidth, margins);
+  saveSettingsToLocalStorage();
 }
 
 function renderLiveSheetComparisonMatrix(lengthCm, widthCm, gapMm, productCount, gsm, curPaperL, curPaperW, marginsMm) {
@@ -747,6 +750,49 @@ function renderSheetVisualization(result) {
   var itemH = active.itemWidthCm * scale;
   var gapPx = active.gapCm * scale;
 
+  var isDark = currentThemeMode === "dark";
+  var svgPalette = isDark
+    ? {
+        wasteBg: "#2A1215",
+        wasteStroke: "#7F1D1D",
+        gapBg: "#2E2310",
+        gapStroke: "#D97706",
+        sheetStroke: "#94A3B8",
+        safeAreaFill: "rgba(15, 23, 42, 0.55)",
+        safeAreaStroke: "#94A3B8",
+        cellFill: "#0C4A6E",
+        cellStroke: "#38BDF8",
+        cellText: "#E0F2FE",
+        calloutStroke: "#94A3B8",
+        calloutBoxFill: "#1E293B",
+        calloutBoxStroke: "#475569",
+        calloutText: "#F8FAFC",
+        accentStroke: "#38BDF8",
+        accentText: "#38BDF8",
+        wasteCalloutStroke: "#F87171",
+        wasteCalloutText: "#FCA5A5"
+      }
+    : {
+        wasteBg: "#FEF2F2",
+        wasteStroke: "#FCA5A5",
+        gapBg: "#FEF3C7",
+        gapStroke: "#F59E0B",
+        sheetStroke: "#334155",
+        safeAreaFill: "rgba(255, 255, 255, 0.45)",
+        safeAreaStroke: "#64748B",
+        cellFill: "#E0F2FE",
+        cellStroke: "#0369A1",
+        cellText: "#0C4A6E",
+        calloutStroke: "#334155",
+        calloutBoxFill: "#F8FAFC",
+        calloutBoxStroke: "#CBD5E1",
+        calloutText: "#0F172A",
+        accentStroke: "#0284C7",
+        accentText: "#0369A1",
+        wasteCalloutStroke: "#DC2626",
+        wasteCalloutText: "#B91C1C"
+      };
+
   var svgParts = [];
   svgParts.push(
     '<svg id="sheetSvg" viewBox="0 0 ' + viewW + ' ' + viewH + '" role="img" aria-label="نقشه دینامیک چیدمان محصولات در کاغذ، مارجین چهار طرف و میزان پرتی">'
@@ -755,32 +801,32 @@ function renderSheetVisualization(result) {
   svgParts.push(
     '<defs>' +
       '<pattern id="wasteHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">' +
-        '<rect width="10" height="10" fill="#FEF2F2" />' +
-        '<line x1="0" y1="0" x2="0" y2="10" stroke="#FCA5A5" stroke-width="2.5" />' +
+        '<rect width="10" height="10" fill="' + svgPalette.wasteBg + '" />' +
+        '<line x1="0" y1="0" x2="0" y2="10" stroke="' + svgPalette.wasteStroke + '" stroke-width="2.5" />' +
       '</pattern>' +
       '<pattern id="gapPattern" width="6" height="6" patternTransform="rotate(-45 0 0)" patternUnits="userSpaceOnUse">' +
-        '<rect width="6" height="6" fill="#FEF3C7" />' +
-        '<line x1="0" y1="0" x2="0" y2="6" stroke="#F59E0B" stroke-width="1.2" opacity="0.45" />' +
+        '<rect width="6" height="6" fill="' + svgPalette.gapBg + '" />' +
+        '<line x1="0" y1="0" x2="0" y2="6" stroke="' + svgPalette.gapStroke + '" stroke-width="1.2" opacity="0.45" />' +
       '</pattern>' +
     '</defs>'
   );
 
   // Full Paper Sheet Base (Waste Hatched Background)
   svgParts.push(
-    '<rect x="' + originX + '" y="' + originY + '" width="' + sheetW + '" height="' + sheetH + '" fill="url(#wasteHatch)" stroke="#334155" stroke-width="2" rx="2" />'
+    '<rect x="' + originX + '" y="' + originY + '" width="' + sheetW + '" height="' + sheetH + '" fill="url(#wasteHatch)" stroke="' + svgPalette.sheetStroke + '" stroke-width="2" rx="2" />'
   );
 
   // Safe Printable Area Guide (when 4-sided margins are set)
   if (hasMargins && effW > 0 && effH > 0) {
     svgParts.push(
-      '<rect x="' + gridOriginX + '" y="' + gridOriginY + '" width="' + effW + '" height="' + effH + '" fill="rgba(255,255,255,0.45)" stroke="#64748B" stroke-width="1.2" stroke-dasharray="4,4" />'
+      '<rect x="' + gridOriginX + '" y="' + gridOriginY + '" width="' + effW + '" height="' + effH + '" fill="' + svgPalette.safeAreaFill + '" stroke="' + svgPalette.safeAreaStroke + '" stroke-width="1.2" stroke-dasharray="4,4" />'
     );
   }
 
   // Arranged Bounding Box inside printable area
   if (usedW > 0 && usedH > 0) {
     svgParts.push(
-      '<rect x="' + gridOriginX + '" y="' + gridOriginY + '" width="' + usedW + '" height="' + usedH + '" fill="url(#gapPattern)" stroke="#0284C7" stroke-width="1.5" stroke-dasharray="5,3" />'
+      '<rect x="' + gridOriginX + '" y="' + gridOriginY + '" width="' + usedW + '" height="' + usedH + '" fill="url(#gapPattern)" stroke="' + svgPalette.accentStroke + '" stroke-width="1.5" stroke-dasharray="5,3" />'
     );
   }
 
@@ -805,7 +851,7 @@ function renderSheetVisualization(result) {
           ')" onclick="inspectCellLive(' +
             index + ',' + (c + 1) + ',' + (r + 1) + ',' + realXCm + ',' + realYCm + ',' + active.itemLengthCm + ',' + active.itemWidthCm +
           ')">' +
-            '<rect x="' + cx + '" y="' + cy + '" width="' + rw + '" height="' + rh + '" fill="#E0F2FE" stroke="#0369A1" stroke-width="1.2" rx="1.5">' +
+            '<rect x="' + cx + '" y="' + cy + '" width="' + rw + '" height="' + rh + '" fill="' + svgPalette.cellFill + '" stroke="' + svgPalette.cellStroke + '" stroke-width="1.2" rx="1.5">' +
               '<title>محصول #' + index + ' (' + active.itemLengthCm + '×' + active.itemWidthCm + ' سانتی‌متر)</title>' +
             '</rect>'
         );
@@ -815,7 +861,7 @@ function renderSheetVisualization(result) {
             ? "\u200E" + active.itemLengthCm + "×" + active.itemWidthCm
             : String(index);
           svgParts.push(
-            '<text x="' + roundNum(cx + rw / 2, 1) + '" y="' + roundNum(cy + rh / 2 + 3.5, 1) + '" direction="ltr" text-anchor="middle" fill="#0C4A6E" font-size="10" font-family="JetBrains Mono, monospace" font-weight="600">' +
+            '<text x="' + roundNum(cx + rw / 2, 1) + '" y="' + roundNum(cy + rh / 2 + 3.5, 1) + '" direction="ltr" text-anchor="middle" fill="' + svgPalette.cellText + '" font-size="10" font-family="JetBrains Mono, monospace" font-weight="600">' +
               labelText +
             '</text>'
           );
@@ -826,8 +872,8 @@ function renderSheetVisualization(result) {
     }
   } else {
     svgParts.push(
-      '<rect x="' + gridOriginX + '" y="' + gridOriginY + '" width="' + usedW + '" height="' + usedH + '" fill="#E0F2FE" stroke="#0369A1" stroke-width="1.5" />' +
-      '<text x="' + roundNum(gridOriginX + usedW / 2, 1) + '" y="' + roundNum(gridOriginY + usedH / 2, 1) + '" text-anchor="middle" fill="#0C4A6E" font-size="14" font-weight="700">' +
+      '<rect x="' + gridOriginX + '" y="' + gridOriginY + '" width="' + usedW + '" height="' + usedH + '" fill="' + svgPalette.cellFill + '" stroke="' + svgPalette.cellStroke + '" stroke-width="1.5" />' +
+      '<text x="' + roundNum(gridOriginX + usedW / 2, 1) + '" y="' + roundNum(gridOriginY + usedH / 2, 1) + '" text-anchor="middle" fill="' + svgPalette.cellText + '" font-size="14" font-weight="700">' +
         active.countX + ' × ' + active.countY + ' (' + active.quantity + ' محصول)' +
       '</text>'
     );
@@ -837,11 +883,11 @@ function renderSheetVisualization(result) {
   if (showCutDimensions) {
     var topLineY = originY - 26;
     svgParts.push(
-      '<line x1="' + originX + '" y1="' + topLineY + '" x2="' + (originX + sheetW) + '" y2="' + topLineY + '" stroke="#334155" stroke-width="1.2" />' +
-      '<line x1="' + originX + '" y1="' + (topLineY - 5) + '" x2="' + originX + '" y2="' + (originY - 4) + '" stroke="#334155" stroke-width="1" stroke-dasharray="2,2" />' +
-      '<line x1="' + (originX + sheetW) + '" y1="' + (topLineY - 5) + '" x2="' + (originX + sheetW) + '" y2="' + (originY - 4) + '" stroke="#334155" stroke-width="1" stroke-dasharray="2,2" />' +
-      '<rect x="' + roundNum(originX + sheetW / 2 - 78, 1) + '" y="' + (topLineY - 11) + '" width="156" height="20" rx="4" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1" />' +
-      '<text x="' + roundNum(originX + sheetW / 2, 1) + '" y="' + (topLineY + 3) + '" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="600">' +
+      '<line x1="' + originX + '" y1="' + topLineY + '" x2="' + (originX + sheetW) + '" y2="' + topLineY + '" stroke="' + svgPalette.calloutStroke + '" stroke-width="1.2" />' +
+      '<line x1="' + originX + '" y1="' + (topLineY - 5) + '" x2="' + originX + '" y2="' + (originY - 4) + '" stroke="' + svgPalette.calloutStroke + '" stroke-width="1" stroke-dasharray="2,2" />' +
+      '<line x1="' + (originX + sheetW) + '" y1="' + (topLineY - 5) + '" x2="' + (originX + sheetW) + '" y2="' + (originY - 4) + '" stroke="' + svgPalette.calloutStroke + '" stroke-width="1" stroke-dasharray="2,2" />' +
+      '<rect x="' + roundNum(originX + sheetW / 2 - 78, 1) + '" y="' + (topLineY - 11) + '" width="156" height="20" rx="4" fill="' + svgPalette.calloutBoxFill + '" stroke="' + svgPalette.calloutBoxStroke + '" stroke-width="1" />' +
+      '<text x="' + roundNum(originX + sheetW / 2, 1) + '" y="' + (topLineY + 3) + '" text-anchor="middle" fill="' + svgPalette.calloutText + '" font-size="11" font-weight="600">' +
         'طول کل کاغذ: \u200E' + active.paperLengthCm + ' cm\u200E' +
       '</text>'
     );
@@ -849,10 +895,10 @@ function renderSheetVisualization(result) {
     var botLineY = originY + sheetH + 22;
     if (usedW > 20) {
       svgParts.push(
-        '<line x1="' + gridOriginX + '" y1="' + botLineY + '" x2="' + (gridOriginX + usedW) + '" y2="' + botLineY + '" stroke="#0284C7" stroke-width="1.5" />' +
-        '<line x1="' + gridOriginX + '" y1="' + (originY + sheetH + 4) + '" x2="' + gridOriginX + '" y2="' + (botLineY + 5) + '" stroke="#0284C7" stroke-width="1" />' +
-        '<line x1="' + (gridOriginX + usedW) + '" y1="' + (originY + sheetH + 4) + '" x2="' + (gridOriginX + usedW) + '" y2="' + (botLineY + 5) + '" stroke="#0284C7" stroke-width="1" />' +
-        '<text x="' + roundNum(gridOriginX + usedW / 2, 1) + '" y="' + (botLineY + 16) + '" text-anchor="middle" fill="#0369A1" font-size="11" font-weight="700">' +
+        '<line x1="' + gridOriginX + '" y1="' + botLineY + '" x2="' + (gridOriginX + usedW) + '" y2="' + botLineY + '" stroke="' + svgPalette.accentStroke + '" stroke-width="1.5" />' +
+        '<line x1="' + gridOriginX + '" y1="' + (originY + sheetH + 4) + '" x2="' + gridOriginX + '" y2="' + (botLineY + 5) + '" stroke="' + svgPalette.accentStroke + '" stroke-width="1" />' +
+        '<line x1="' + (gridOriginX + usedW) + '" y1="' + (originY + sheetH + 4) + '" x2="' + (gridOriginX + usedW) + '" y2="' + (botLineY + 5) + '" stroke="' + svgPalette.accentStroke + '" stroke-width="1" />' +
+        '<text x="' + roundNum(gridOriginX + usedW / 2, 1) + '" y="' + (botLineY + 16) + '" text-anchor="middle" fill="' + svgPalette.accentText + '" font-size="11" font-weight="700">' +
           'طول چیده شده: \u200E' + active.usedLengthCm + ' cm\u200E (' + active.countX + ' عدد)' +
         '</text>'
       );
@@ -864,9 +910,9 @@ function renderSheetVisualization(result) {
     var rightSideUnusedCm = roundNum(active.paperLengthCm - active.marginLeftCm - active.usedLengthCm, 2);
     if (rightSideUnusedCm > 0 && wasteW >= 18) {
       svgParts.push(
-        '<line x1="' + rightWasteStart + '" y1="' + botLineY + '" x2="' + rightWasteEnd + '" y2="' + botLineY + '" stroke="#DC2626" stroke-width="1.5" />' +
-        '<line x1="' + rightWasteEnd + '" y1="' + (originY + sheetH + 4) + '" x2="' + rightWasteEnd + '" y2="' + (botLineY + 5) + '" stroke="#DC2626" stroke-width="1" />' +
-        '<text x="' + roundNum(rightWasteStart + wasteW / 2, 1) + '" y="' + (botLineY + 16) + '" text-anchor="middle" fill="#B91C1C" font-size="10.5" font-weight="700">' +
+        '<line x1="' + rightWasteStart + '" y1="' + botLineY + '" x2="' + rightWasteEnd + '" y2="' + botLineY + '" stroke="' + svgPalette.wasteCalloutStroke + '" stroke-width="1.5" />' +
+        '<line x1="' + rightWasteEnd + '" y1="' + (originY + sheetH + 4) + '" x2="' + rightWasteEnd + '" y2="' + (botLineY + 5) + '" stroke="' + svgPalette.wasteCalloutStroke + '" stroke-width="1" />' +
+        '<text x="' + roundNum(rightWasteStart + wasteW / 2, 1) + '" y="' + (botLineY + 16) + '" text-anchor="middle" fill="' + svgPalette.wasteCalloutText + '" font-size="10.5" font-weight="700">' +
           (wasteW >= 58 ? 'پرتی: \u200E' + rightSideUnusedCm + ' cm\u200E' : '\u200E' + rightSideUnusedCm + ' cm\u200E') +
         '</text>'
       );
@@ -874,10 +920,10 @@ function renderSheetVisualization(result) {
 
     var leftLineX = originX - 24;
     svgParts.push(
-      '<line x1="' + leftLineX + '" y1="' + originY + '" x2="' + leftLineX + '" y2="' + (originY + sheetH) + '" stroke="#334155" stroke-width="1.2" />' +
-      '<line x1="' + (leftLineX - 5) + '" y1="' + originY + '" x2="' + (originX - 4) + '" y2="' + originY + '" stroke="#334155" stroke-width="1" />' +
-      '<line x1="' + (leftLineX - 5) + '" y1="' + (originY + sheetH) + '" x2="' + (originX - 4) + '" y2="' + (originY + sheetH) + '" stroke="#334155" stroke-width="1" />' +
-      '<text x="' + (leftLineX - 10) + '" y="' + roundNum(originY + sheetH / 2, 1) + '" text-anchor="middle" fill="#0F172A" font-size="11" font-weight="600" transform="rotate(-90 ' + (leftLineX - 10) + ' ' + roundNum(originY + sheetH / 2, 1) + ')">' +
+      '<line x1="' + leftLineX + '" y1="' + originY + '" x2="' + leftLineX + '" y2="' + (originY + sheetH) + '" stroke="' + svgPalette.calloutStroke + '" stroke-width="1.2" />' +
+      '<line x1="' + (leftLineX - 5) + '" y1="' + originY + '" x2="' + (originX - 4) + '" y2="' + originY + '" stroke="' + svgPalette.calloutStroke + '" stroke-width="1" />' +
+      '<line x1="' + (leftLineX - 5) + '" y1="' + (originY + sheetH) + '" x2="' + (originX - 4) + '" y2="' + (originY + sheetH) + '" stroke="' + svgPalette.calloutStroke + '" stroke-width="1" />' +
+      '<text x="' + (leftLineX - 10) + '" y="' + roundNum(originY + sheetH / 2, 1) + '" text-anchor="middle" fill="' + svgPalette.calloutText + '" font-size="11" font-weight="600" transform="rotate(-90 ' + (leftLineX - 10) + ' ' + roundNum(originY + sheetH / 2, 1) + ')">' +
         'عرض کاغذ: \u200E' + active.paperWidthCm + ' cm\u200E' +
       '</text>'
     );
@@ -885,10 +931,10 @@ function renderSheetVisualization(result) {
     var rightLineX = originX + sheetW + 24;
     if (usedH > 20) {
       svgParts.push(
-        '<line x1="' + rightLineX + '" y1="' + gridOriginY + '" x2="' + rightLineX + '" y2="' + (gridOriginY + usedH) + '" stroke="#0284C7" stroke-width="1.5" />' +
-        '<line x1="' + (originX + sheetW + 4) + '" y1="' + gridOriginY + '" x2="' + (rightLineX + 5) + '" y2="' + gridOriginY + '" stroke="#0284C7" stroke-width="1" />' +
-        '<line x1="' + (originX + sheetW + 4) + '" y1="' + (gridOriginY + usedH) + '" x2="' + (rightLineX + 5) + '" y2="' + (gridOriginY + usedH) + '" stroke="#0284C7" stroke-width="1" />' +
-        '<text x="' + (rightLineX + 14) + '" y="' + roundNum(gridOriginY + usedH / 2, 1) + '" text-anchor="middle" fill="#0369A1" font-size="11" font-weight="700" transform="rotate(90 ' + (rightLineX + 14) + ' ' + roundNum(gridOriginY + usedH / 2, 1) + ')">' +
+        '<line x1="' + rightLineX + '" y1="' + gridOriginY + '" x2="' + rightLineX + '" y2="' + (gridOriginY + usedH) + '" stroke="' + svgPalette.accentStroke + '" stroke-width="1.5" />' +
+        '<line x1="' + (originX + sheetW + 4) + '" y1="' + gridOriginY + '" x2="' + (rightLineX + 5) + '" y2="' + gridOriginY + '" stroke="' + svgPalette.accentStroke + '" stroke-width="1" />' +
+        '<line x1="' + (originX + sheetW + 4) + '" y1="' + (gridOriginY + usedH) + '" x2="' + (rightLineX + 5) + '" y2="' + (gridOriginY + usedH) + '" stroke="' + svgPalette.accentStroke + '" stroke-width="1" />' +
+        '<text x="' + (rightLineX + 14) + '" y="' + roundNum(gridOriginY + usedH / 2, 1) + '" text-anchor="middle" fill="' + svgPalette.accentText + '" font-size="11" font-weight="700" transform="rotate(90 ' + (rightLineX + 14) + ' ' + roundNum(gridOriginY + usedH / 2, 1) + ')">' +
           'عرض چیده شده: \u200E' + active.usedWidthCm + ' cm\u200E' +
         '</text>'
       );
@@ -1365,7 +1411,198 @@ function exportPdfReport() {
   };
 }
 
+var SETTINGS_STORAGE_KEY = "imposition_calculator_settings_v1";
 var currentViewportMode = "desktop";
+var currentThemeMode = "light";
+
+function getStorageInstance(customStorage) {
+  if (customStorage) return customStorage;
+  try {
+    if (typeof window !== "undefined" && window.localStorage) {
+      return window.localStorage;
+    }
+    if (typeof localStorage !== "undefined") {
+      return localStorage;
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+function saveSettingsToLocalStorage(customStorage) {
+  if (typeof document === "undefined") return null;
+  var storage = getStorageInstance(customStorage);
+  if (!storage || typeof storage.setItem !== "function") return null;
+
+  var fields = [
+    "length",
+    "width",
+    "paperLength",
+    "paperWidth",
+    "marginTop",
+    "marginBottom",
+    "marginRight",
+    "marginLeft",
+    "gap",
+    "productCount",
+    "paperGsm"
+  ];
+  var data = {
+    orientation: currentOrientationMode,
+    viewportMode: currentViewportMode,
+    themeMode: currentThemeMode
+  };
+  var hasAnyField = false;
+
+  for (var i = 0; i < fields.length; i++) {
+    var key = fields[i];
+    var el = document.getElementById(key);
+    if (el && el.value !== undefined && el.value !== "") {
+      data[key] = String(el.value);
+      hasAnyField = true;
+    }
+  }
+
+  if (!hasAnyField) return null;
+
+  try {
+    storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(data));
+    return data;
+  } catch (e) {
+    return null;
+  }
+}
+
+function loadSettingsFromLocalStorage(customStorage) {
+  if (typeof document === "undefined") return null;
+  var storage = getStorageInstance(customStorage);
+  if (!storage || typeof storage.getItem !== "function") return null;
+
+  var raw = null;
+  try {
+    raw = storage.getItem(SETTINGS_STORAGE_KEY);
+  } catch (e) {
+    return null;
+  }
+  if (!raw) return null;
+
+  var parsed = null;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+
+  var fields = [
+    "length",
+    "width",
+    "paperLength",
+    "paperWidth",
+    "marginTop",
+    "marginBottom",
+    "marginRight",
+    "marginLeft",
+    "gap",
+    "productCount",
+    "paperGsm"
+  ];
+
+  for (var i = 0; i < fields.length; i++) {
+    var key = fields[i];
+    if (parsed[key] !== undefined && parsed[key] !== null && parsed[key] !== "") {
+      var el = document.getElementById(key);
+      if (el) {
+        el.value = String(parsed[key]);
+      }
+    }
+  }
+
+  if (
+    parsed.orientation === "normal" ||
+    parsed.orientation === "rotated" ||
+    parsed.orientation === "auto"
+  ) {
+    currentOrientationMode = parsed.orientation;
+    if (typeof document.querySelectorAll === "function") {
+      var buttons = document.querySelectorAll("[data-orientation-btn]");
+      for (var b = 0; b < buttons.length; b++) {
+        var btn = buttons[b];
+        var isActive = btn.getAttribute("data-orientation-btn") === parsed.orientation;
+        if (btn.classList) btn.classList.toggle("active", isActive);
+        if (btn.setAttribute) btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      }
+    }
+  }
+
+  if (parsed.viewportMode === "mobile" || parsed.viewportMode === "desktop") {
+    toggleMobileDesktopMode(parsed.viewportMode);
+  }
+
+  if (parsed.themeMode === "dark" || parsed.themeMode === "light") {
+    toggleThemeMode(parsed.themeMode);
+  }
+
+  return parsed;
+}
+
+function clearSavedSettingsFromLocalStorage(customStorage) {
+  var storage = getStorageInstance(customStorage);
+  if (!storage || typeof storage.removeItem !== "function") return;
+  try {
+    storage.removeItem(SETTINGS_STORAGE_KEY);
+  } catch (e) {
+    // Ignore storage removal errors
+  }
+}
+
+function getThemeMode() {
+  return currentThemeMode;
+}
+
+function toggleThemeMode(forceTheme) {
+  if (forceTheme === "dark" || forceTheme === "light") {
+    currentThemeMode = forceTheme;
+  } else {
+    currentThemeMode = currentThemeMode === "dark" ? "light" : "dark";
+  }
+
+  var isDark = currentThemeMode === "dark";
+
+  if (typeof document !== "undefined") {
+    if (document.documentElement && document.documentElement.setAttribute) {
+      document.documentElement.setAttribute("data-theme", currentThemeMode);
+    }
+    if (document.body) {
+      if (isDark && document.body.classList) {
+        document.body.classList.add("dark-theme");
+      } else if (document.body.classList) {
+        document.body.classList.remove("dark-theme");
+      }
+      if (document.body.setAttribute) {
+        document.body.setAttribute("data-theme", currentThemeMode);
+      }
+    }
+
+    var themeBtn = document.getElementById("toggleThemeBtn");
+    if (themeBtn) {
+      themeBtn.textContent = isDark ? "حالت روشن" : "حالت تیره";
+      if (themeBtn.setAttribute) {
+        themeBtn.setAttribute("aria-pressed", isDark ? "true" : "false");
+      }
+      if (isDark && themeBtn.classList) {
+        themeBtn.classList.add("active-dark-mode");
+      } else if (themeBtn.classList) {
+        themeBtn.classList.remove("active-dark-mode");
+      }
+    }
+  }
+
+  calculateQuantity();
+  saveSettingsToLocalStorage();
+  return currentThemeMode;
+}
 
 function getViewportMode() {
   return currentViewportMode;
@@ -1405,6 +1642,7 @@ function toggleMobileDesktopMode(forceMode) {
     }
   }
 
+  saveSettingsToLocalStorage();
   return currentViewportMode;
 }
 
@@ -1432,6 +1670,7 @@ function resetToSampleValues() {
     statusEl.setAttribute("hidden", "true");
     statusEl.textContent = "";
   }
+  clearSavedSettingsFromLocalStorage();
   currentOrientationMode = "normal";
   setOrientationMode("normal");
 }
@@ -1439,6 +1678,8 @@ function resetToSampleValues() {
 // Wire dynamic live listeners when running in browser
 if (typeof window !== "undefined" && typeof document !== "undefined") {
   window.addEventListener("DOMContentLoaded", function () {
+    loadSettingsFromLocalStorage();
+
     var inputIds = [
       "length",
       "width",
@@ -1500,6 +1741,12 @@ if (typeof module !== "undefined" && module.exports) {
     createPdfBinaryFromJpeg: createPdfBinaryFromJpeg,
     exportPdfReport: exportPdfReport,
     toggleMobileDesktopMode: toggleMobileDesktopMode,
-    getViewportMode: getViewportMode
+    getViewportMode: getViewportMode,
+    toggleThemeMode: toggleThemeMode,
+    getThemeMode: getThemeMode,
+    SETTINGS_STORAGE_KEY: SETTINGS_STORAGE_KEY,
+    saveSettingsToLocalStorage: saveSettingsToLocalStorage,
+    loadSettingsFromLocalStorage: loadSettingsFromLocalStorage,
+    clearSavedSettingsFromLocalStorage: clearSavedSettingsFromLocalStorage
   };
 }

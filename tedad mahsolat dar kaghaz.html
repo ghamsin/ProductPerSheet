@@ -34,6 +34,15 @@
       <div class="top-action">
         <button
           type="button"
+          id="toggleThemeBtn"
+          class="btn-theme-toggle"
+          aria-pressed="false"
+          onclick="toggleThemeMode()"
+        >
+          حالت تیره
+        </button>
+        <button
+          type="button"
           id="toggleViewportModeBtn"
           class="btn-viewport-toggle"
           aria-pressed="false"
@@ -165,6 +174,14 @@
                     onclick="applyPaperPreset(29.7, 21, 'A4')"
                   >
                     A4 (29.7×21)
+                  </button>
+                  <button
+                    type="button"
+                    class="preset-btn"
+                    data-paper-preset="B4"
+                    onclick="applyPaperPreset(35, 25, 'B4')"
+                  >
+                    B4 (25×35)
                   </button>
                   <button
                     type="button"
